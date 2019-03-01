@@ -1,0 +1,2 @@
+committing:
+  - run cargo fmt

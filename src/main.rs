@@ -1,13 +1,13 @@
 #[macro_use]
 extern crate serde_derive;
-
 extern crate serde_yaml;
 
+use std::collections::BTreeMap;
 use std::error::Error;
 use std::fs::File;
 use std::path::Path;
 
-use std::collections::BTreeMap;
+use dialoguer::Confirmation;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct CheckListList(BTreeMap<String, CheckList>);
@@ -23,15 +23,31 @@ fn read_checklists(path: &Path) -> CheckListList {
     };
     match serde_yaml::from_reader::<_, CheckListList>(file) {
         Err(why) => panic!("couldn't read {}: {}", display, why.description()),
-        Ok(s) => return s,
+        Ok(s) => s,
     }
+}
+
+fn ask_question(prompt: &str) -> bool {
+    Confirmation::new()
+        .with_text(&prompt)
+        .interact()
+        .expect("Could not prompt, bailing!")
+}
+
+fn ask_formatted_question(prefix: &str, prompt: &str) -> bool {
+    ask_question(&format!("{}{}?", prefix, prompt))
 }
 
 fn main() {
     let path = Path::new(".checklist.yml");
     let checklists = read_checklists(&path);
-    match checklists.0.get("committing") {
-        Some(checklist) => print!("{} contains:\n{:#?}", path.display(), checklist),
-        None => (),
+    if let Some(checklist) = checklists.0.get("committing") {
+        for item in &checklist.0 {
+            if ask_formatted_question(&"Have you: ", &item) {
+                println!("Great! Continuing...")
+            } else {
+                println!("nevermind then :(");
+            }
+        }
     }
 }

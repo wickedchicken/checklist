@@ -1,0 +1,33 @@
+---
+language: rust
+rust:
+  - stable
+  - beta
+  - nightly
+
+cache: cargo
+
+matrix:
+  allow_failures:
+    - rust: nightly
+  fast_finish: true
+
+dist: xenial
+
+branches:
+  only:
+    - master
+
+install:
+  - pip install --user yamllint  # xenial yamllint is too old for -s
+
+before_script:
+  - rustup component add rustfmt
+  - rustup component add clippy
+
+script:
+  - yamllint -s .checklist.yml .travis.yml
+  - cargo fmt --all -- --check
+  - cargo clippy -- -D warnings
+  - cargo build
+  - cargo test

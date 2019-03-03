@@ -1,2 +1,7 @@
+---
 committing:
   - run cargo fmt
+  - run cargo build
+  - run cargo clippy
+  - run cargo test
+  - run yamllint -s .checklist.yml .travis.yml

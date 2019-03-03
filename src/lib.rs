@@ -14,6 +14,8 @@ use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
+use console::Style;
+use dialoguer::theme::ColorfulTheme;
 use dialoguer::Confirmation;
 
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -40,7 +42,12 @@ impl CheckListList {
 }
 
 fn ask_question(prompt: &str) -> Result<bool, &'static str> {
-    match Confirmation::new().with_text(&prompt).interact() {
+    let mut theme = ColorfulTheme::default();
+    theme.no_style = Style::new().red();
+    match Confirmation::with_theme(&theme)
+        .with_text(&prompt)
+        .interact()
+    {
         Err(_) => Err("error occured while prompting"),
         Ok(answer) => Ok(answer),
     }
@@ -59,7 +66,6 @@ fn question_loop(checklist: &CheckList) -> Result<bool, Box<dyn Error>> {
             println!("Great! Continuing...")
         }
         if !ask_formatted_question(&"Have you: ", &item)? {
-            println!("Aborting, please fix and start again.");
             return Ok(false);
         }
     }
@@ -68,7 +74,11 @@ fn question_loop(checklist: &CheckList) -> Result<bool, Box<dyn Error>> {
 }
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "checklist", about = "Run through a checklist")]
+#[structopt(
+    name = "checklist",
+    about = "Run through a checklist",
+    raw(setting = "structopt::clap::AppSettings::ColoredHelp")
+)]
 pub struct Opt {
     #[structopt(
         parse(from_os_str),
@@ -80,10 +90,17 @@ pub struct Opt {
 }
 
 pub fn run(opts: &Opt) -> Result<(), Box<dyn Error>> {
+    let success = Style::new().green();
+    let failure = Style::new().red();
     let checklists = CheckListList::from_file(&opts.checklist)?;
     if let Some(checklist) = checklists.0.get("committing") {
         if question_loop(&checklist)? {
-            println!("all clear!")
+            println!("{}", success.apply_to("all clear!"));
+        } else {
+            println!(
+                "{} please fix and start again",
+                failure.apply_to("aborting")
+            );
         }
     }
     Ok(())

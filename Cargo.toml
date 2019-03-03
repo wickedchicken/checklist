@@ -13,4 +13,7 @@ serde = "1.0.88"
 serde_derive = "1.0.88"
 serde_yaml = "0.8.8"
 structopt = "0.2.14"
-tempfile = "3.0.7"
+
+[dev-dependencies]
+assert_fs = "0.11.3"
+scopeguard = "1.0.0"

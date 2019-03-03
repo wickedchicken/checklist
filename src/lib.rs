@@ -8,7 +8,6 @@ extern crate maplit;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_yaml;
-extern crate tempfile;
 
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -110,33 +109,32 @@ pub fn run(opts: &Opt) -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::{Seek, SeekFrom, Write};
-
-    fn write_to_tempfile(contents: &str) -> File {
-        // Write
-        let mut tmpfile: File = tempfile::tempfile().unwrap();
-        tmpfile.write_all(contents.as_bytes()).unwrap();
-
-        // Seek to start
-        tmpfile.seek(SeekFrom::Start(0)).unwrap();
-
-        tmpfile
-    }
+    use assert_fs::prelude::*;
 
     #[test]
     fn test_correct_yaml() {
-        let tempfile = write_to_tempfile("committing:\n- test");
+        let t = assert_fs::TempDir::new().unwrap();
+        let temp = scopeguard::guard(t, |t| {
+            t.close().unwrap();
+        });
+        temp.child(".checklist.yml")
+            .write_str("committing:\n- test")
+            .unwrap();
         assert_eq!(
-            CheckListList::from_reader(tempfile).unwrap(),
+            CheckListList::from_file(temp.child(".checklist.yml").path()).unwrap(),
             CheckListList(btreemap! {
                 String::from("committing") => CheckList(vec![String::from("test")]),
             }),
-        )
+        );
     }
 
     #[test]
     fn test_incorrect_yaml() {
-        let tempfile = write_to_tempfile("beep beep");
-        assert!(CheckListList::from_reader(tempfile).is_err())
+        let t = assert_fs::TempDir::new().unwrap();
+        let temp = scopeguard::guard(t, |t| {
+            t.close().unwrap();
+        });
+        temp.child(".checklist.yml").write_str("beep beep").unwrap();
+        assert!(CheckListList::from_file(temp.child(".checklist.yml").path()).is_err())
     }
 }

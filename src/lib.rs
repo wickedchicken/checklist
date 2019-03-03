@@ -137,4 +137,13 @@ mod tests {
         temp.child(".checklist.yml").write_str("beep beep").unwrap();
         assert!(CheckListList::from_file(temp.child(".checklist.yml").path()).is_err())
     }
+
+    #[test]
+    fn test_invalid_filename() {
+        let t = assert_fs::TempDir::new().unwrap();
+        let temp = scopeguard::guard(t, |t| {
+            t.close().unwrap();
+        });
+        assert!(CheckListList::from_file(temp.child("does_not_exist").path()).is_err())
+    }
 }

@@ -1,4 +1,6 @@
 #[macro_use]
+extern crate failure;
+#[macro_use]
 extern crate structopt;
 #[cfg(test)]
 #[macro_use]
@@ -9,7 +11,6 @@ extern crate serde_yaml;
 extern crate tempfile;
 
 use std::collections::BTreeMap;
-use std::error::Error;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -17,6 +18,7 @@ use std::path::{Path, PathBuf};
 use console::Style;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::Confirmation;
+use failure::Error;
 
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 struct CheckListList(BTreeMap<String, CheckList>);
@@ -25,39 +27,38 @@ struct CheckListList(BTreeMap<String, CheckList>);
 struct CheckList(Vec<String>);
 
 impl CheckListList {
-    fn from_file(path: &Path) -> Result<CheckListList, &'static str> {
+    fn from_file(path: &Path) -> Result<CheckListList, Error> {
         let file = match File::open(&path) {
-            Err(_) => return Err("couldn't open file"),
+            Err(e) => bail!("couldn't open file {}: {}", path.display(), e),
             Ok(file) => file,
         };
-        CheckListList::from_reader(file)
+        match CheckListList::from_reader(file) {
+            Err(e) => bail!("couldn't open file {}: {}", path.display(), e),
+            Ok(s) => Ok(s),
+        }
     }
 
-    fn from_reader<R: Read>(input: R) -> Result<CheckListList, &'static str> {
+    fn from_reader<R: Read>(input: R) -> Result<CheckListList, Error> {
         match serde_yaml::from_reader::<_, CheckListList>(input) {
-            Err(_) => Err("couldn't parse yaml"),
+            Err(e) => bail!("couldn't parse yaml: {}", e),
             Ok(s) => Ok(s),
         }
     }
 }
 
-fn ask_question(prompt: &str) -> Result<bool, &'static str> {
+fn ask_question(prompt: &str) -> Result<bool, Error> {
     let mut theme = ColorfulTheme::default();
     theme.no_style = Style::new().red();
-    match Confirmation::with_theme(&theme)
+    Ok(Confirmation::with_theme(&theme)
         .with_text(&prompt)
-        .interact()
-    {
-        Err(_) => Err("error occured while prompting"),
-        Ok(answer) => Ok(answer),
-    }
+        .interact()?)
 }
 
-fn ask_formatted_question(prefix: &str, prompt: &str) -> Result<bool, &'static str> {
+fn ask_formatted_question(prefix: &str, prompt: &str) -> Result<bool, Error> {
     ask_question(&format!("{}{}?", prefix, prompt))
 }
 
-fn question_loop(checklist: &CheckList) -> Result<bool, Box<dyn Error>> {
+fn question_loop(checklist: &CheckList) -> Result<bool, Error> {
     let mut seen = false;
     for item in &checklist.0 {
         if !seen {
@@ -89,7 +90,7 @@ pub struct Opt {
     checklist: PathBuf,
 }
 
-pub fn run(opts: &Opt) -> Result<(), Box<dyn Error>> {
+pub fn run(opts: &Opt) -> Result<(), Error> {
     let success = Style::new().green();
     let failure = Style::new().red();
     let checklists = CheckListList::from_file(&opts.checklist)?;
@@ -126,19 +127,16 @@ mod tests {
     fn test_correct_yaml() {
         let tempfile = write_to_tempfile("committing:\n- test");
         assert_eq!(
-            CheckListList::from_reader(tempfile),
-            Ok(CheckListList(btreemap! {
+            CheckListList::from_reader(tempfile).unwrap(),
+            CheckListList(btreemap! {
                 String::from("committing") => CheckList(vec![String::from("test")]),
-            })),
+            }),
         )
     }
 
     #[test]
     fn test_incorrect_yaml() {
         let tempfile = write_to_tempfile("beep beep");
-        assert_eq!(
-            CheckListList::from_reader(tempfile),
-            Err("couldn't parse yaml")
-        )
+        assert!(CheckListList::from_reader(tempfile).is_err())
     }
 }

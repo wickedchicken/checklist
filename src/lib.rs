@@ -1,3 +1,5 @@
+#[macro_use]
+extern crate structopt;
 #[cfg(test)]
 #[macro_use]
 extern crate maplit;
@@ -10,7 +12,7 @@ use std::collections::BTreeMap;
 use std::error::Error;
 use std::fs::File;
 use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use dialoguer::Confirmation;
 
@@ -65,8 +67,20 @@ fn question_loop(checklist: &CheckList) -> Result<bool, Box<dyn Error>> {
     Ok(true)
 }
 
-pub fn run(path: &Path) -> Result<(), Box<dyn Error>> {
-    let checklists = CheckListList::from_file(&path)?;
+#[derive(Debug, StructOpt)]
+#[structopt(name = "checklist", about = "Run through a checklist")]
+pub struct Opt {
+    #[structopt(
+        parse(from_os_str),
+        default_value = ".checklist.yml",
+        long = "checklist",
+        help = "location of the checklist YAML"
+    )]
+    checklist: PathBuf,
+}
+
+pub fn run(opts: &Opt) -> Result<(), Box<dyn Error>> {
+    let checklists = CheckListList::from_file(&opts.checklist)?;
     if let Some(checklist) = checklists.0.get("committing") {
         if question_loop(&checklist)? {
             println!("all clear!")

@@ -1,3 +1,4 @@
+extern crate duct_sh;
 #[macro_use]
 extern crate failure;
 #[macro_use]
@@ -11,20 +12,22 @@ extern crate serde_yaml;
 
 use std::collections::BTreeMap;
 use std::fs::File;
-use std::io::Read;
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
 use console::Style;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::Confirmation;
+use duct_sh::sh_dangerous;
 use failure::Error;
+use indicatif::{ProgressBar, ProgressStyle};
 
 // Increment the version number every time the version changes. I can't figure out how to
 // break this out into its own const, see https://github.com/rust-lang/rust/issues/52393.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "schema_version")]
 enum VersionedCheckListList {
-    #[serde(rename = "1")] // increment here
+    #[serde(rename = "2")] // increment here
     Current(CheckListList),
 }
 
@@ -32,7 +35,12 @@ enum VersionedCheckListList {
 struct CheckListList(BTreeMap<String, CheckList>);
 
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
-struct CheckList(Vec<String>);
+struct CheckList {
+    #[serde(default)]
+    automated: Vec<String>,
+    #[serde(default)]
+    manual: Vec<String>,
+}
 
 impl CheckListList {
     fn from_file(path: &Path) -> Result<CheckListList, Error> {
@@ -69,18 +77,55 @@ fn ask_formatted_question(prefix: &str, prompt: &str) -> Result<bool, Error> {
 }
 
 fn question_loop(checklist: &CheckList) -> Result<bool, Error> {
+    let success = Style::new().green();
+    let failure = Style::new().red();
     let mut seen = false;
-    for item in &checklist.0 {
+    for item in &checklist.manual {
         if !seen {
             seen = true;
         } else {
             println!("Great! Continuing...")
         }
         if !ask_formatted_question(&"Have you: ", &item)? {
+            println!("\nmanual tests: {}", failure.apply_to("failed"));
             return Ok(false);
         }
     }
 
+    println!("\nmanual tests: {}", success.apply_to("passed"));
+    Ok(true)
+}
+
+fn shell_loop(checklist: &CheckList) -> Result<bool, Error> {
+    let success = Style::new().green();
+    let failure = Style::new().red();
+    let sty = ProgressStyle::default_bar()
+        .template("{bar:40.green/white} {pos:>2}/{len:7} {wide_msg:.blue}");
+    let b = ProgressBar::new(checklist.automated.len() as u64);
+    b.set_style(sty.clone());
+    let progress_bar = scopeguard::guard(b, |b| {
+        b.finish_and_clear();
+    });
+    for item in &checklist.automated {
+        progress_bar.set_message(&item);
+        let command_res = sh_dangerous(item)
+            .stdout_capture()
+            .stderr_capture()
+            .unchecked()
+            .run()?;
+        if !command_res.status.success() {
+            progress_bar.finish_and_clear();
+            println!("\nautomated tests: {}", failure.apply_to("failed"));
+            println!("{} running: {}\n", failure.apply_to("error"), item);
+            io::stdout().write_all(&command_res.stdout)?;
+            io::stderr().write_all(&command_res.stderr)?;
+            return Ok(false);
+        }
+        progress_bar.inc(1);
+    }
+
+    progress_bar.finish_and_clear();
+    println!("\nautomated tests: {}", success.apply_to("passed"));
     Ok(true)
 }
 
@@ -105,7 +150,7 @@ pub fn run(opts: &Opt) -> Result<(), Error> {
     let failure = Style::new().red();
     let checklists = CheckListList::from_file(&opts.checklist)?;
     if let Some(checklist) = checklists.0.get("committing") {
-        if question_loop(&checklist)? {
+        if shell_loop(&checklist)? && question_loop(&checklist)? {
             println!("{}", success.apply_to("all clear!"));
         } else {
             println!(
@@ -129,12 +174,37 @@ mod tests {
             t.close().unwrap();
         });
         temp.child(".checklist.yml")
-            .write_str("schema_version: 1\ncommitting:\n- test")
+            .write_str(
+                "schema_version: 2\ncommitting:\n  automated: []\n  manual:\n    - test",
+            )
             .unwrap();
         assert_eq!(
             CheckListList::from_file(temp.child(".checklist.yml").path()).unwrap(),
             CheckListList(btreemap! {
-                String::from("committing") => CheckList(vec![String::from("test")]),
+                String::from("committing") => CheckList{
+                    manual: vec![String::from("test")],
+                    automated: vec![],
+                },
+            }),
+        );
+    }
+
+    #[test]
+    fn test_defaults() {
+        let t = assert_fs::TempDir::new().unwrap();
+        let temp = scopeguard::guard(t, |t| {
+            t.close().unwrap();
+        });
+        temp.child(".checklist.yml")
+            .write_str("schema_version: 2\ncommitting:\n  manual: []")
+            .unwrap();
+        assert_eq!(
+            CheckListList::from_file(temp.child(".checklist.yml").path()).unwrap(),
+            CheckListList(btreemap! {
+                String::from("committing") => CheckList{
+                    manual: vec![],
+                    automated: vec![],
+                },
             }),
         );
     }

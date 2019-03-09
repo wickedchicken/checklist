@@ -29,7 +29,7 @@ fn with_checklist(tempdir: &TempDir, contents: &str) -> String {
     let checklist_file = tempdir.child(".checklist.yml");
 
     checklist_file
-        .write_str(&format!("schema_version: 1\n{}", contents))
+        .write_str(&format!("schema_version: 2\n{}", contents))
         .unwrap();
 
     checklist_file.path().to_str().unwrap().to_string()
@@ -42,7 +42,7 @@ fn test_basic_usage() {
         t.close().unwrap();
     });
 
-    let checklist_path = with_checklist(&temp, "committing:\n- test");
+    let checklist_path = with_checklist(&temp, "committing:\n  manual:\n    - test");
 
     let mut p = spawn(
         &format!("{} --checklist {}", get_command_path(), checklist_path),
@@ -63,7 +63,7 @@ fn test_basic_rejection() {
         t.close().unwrap();
     });
 
-    let checklist_path = with_checklist(&temp, "committing:\n- test");
+    let checklist_path = with_checklist(&temp, "committing:\n  manual:\n    - test");
 
     let mut p = spawn(
         &format!("{} --checklist {}", get_command_path(), checklist_path),
@@ -84,7 +84,10 @@ fn test_multi_success() {
         t.close().unwrap();
     });
 
-    let checklist_path = with_checklist(&temp, "committing:\n- test\n- test2");
+    let checklist_path = with_checklist(
+        &temp,
+        "committing:\n  automated: []\n  manual:\n    - test\n    - test2",
+    );
 
     let mut p = spawn(
         &format!("{} --checklist {}", get_command_path(), checklist_path),
@@ -107,7 +110,10 @@ fn test_multi_rejection() {
         t.close().unwrap();
     });
 
-    let checklist_path = with_checklist(&temp, "committing:\n- test\n- test2");
+    let checklist_path = with_checklist(
+        &temp,
+        "committing:\n  automated: []\n  manual:\n    - test\n    - test2",
+    );
 
     let mut p = spawn(
         &format!("{} --checklist {}", get_command_path(), checklist_path),

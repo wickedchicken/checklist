@@ -1,4 +1,5 @@
 ---
+schema_version: 1
 committing:
   - run cargo fmt
   - run cargo build

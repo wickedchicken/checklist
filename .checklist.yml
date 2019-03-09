@@ -1,8 +1,12 @@
 ---
-schema_version: 1
+schema_version: 2
 committing:
-  - run cargo fmt
-  - run cargo build
-  - run cargo clippy
-  - run cargo test
-  - run yamllint -s .checklist.yml .travis.yml
+  manual:
+    - checked that the version number has been bumped
+    - checked that the schema version number has been bumped
+  automated:
+    - cargo fmt --all -- --check
+    - cargo build
+    - cargo clippy
+    - cargo test
+    - yamllint -s .checklist.yml .travis.yml

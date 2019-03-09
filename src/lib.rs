@@ -19,6 +19,15 @@ use dialoguer::theme::ColorfulTheme;
 use dialoguer::Confirmation;
 use failure::Error;
 
+// Increment the version number every time the version changes. I can't figure out how to
+// break this out into its own const, see https://github.com/rust-lang/rust/issues/52393.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "schema_version")]
+enum VersionedCheckListList {
+    #[serde(rename = "1")] // increment here
+    Current(CheckListList),
+}
+
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 struct CheckListList(BTreeMap<String, CheckList>);
 
@@ -38,9 +47,11 @@ impl CheckListList {
     }
 
     fn from_reader<R: Read>(input: R) -> Result<CheckListList, Error> {
-        match serde_yaml::from_reader::<_, CheckListList>(input) {
+        match serde_yaml::from_reader::<_, VersionedCheckListList>(input) {
             Err(e) => bail!("couldn't parse yaml: {}", e),
-            Ok(s) => Ok(s),
+            Ok(s) => match s {
+                VersionedCheckListList::Current(s) => Ok(s),
+            },
         }
     }
 }
@@ -118,7 +129,7 @@ mod tests {
             t.close().unwrap();
         });
         temp.child(".checklist.yml")
-            .write_str("committing:\n- test")
+            .write_str("schema_version: 1\ncommitting:\n- test")
             .unwrap();
         assert_eq!(
             CheckListList::from_file(temp.child(".checklist.yml").path()).unwrap(),
@@ -135,6 +146,18 @@ mod tests {
             t.close().unwrap();
         });
         temp.child(".checklist.yml").write_str("beep beep").unwrap();
+        assert!(CheckListList::from_file(temp.child(".checklist.yml").path()).is_err())
+    }
+
+    #[test]
+    fn test_incorrect_schema_version() {
+        let t = assert_fs::TempDir::new().unwrap();
+        let temp = scopeguard::guard(t, |t| {
+            t.close().unwrap();
+        });
+        temp.child(".checklist.yml")
+            .write_str("schema_version: bananas\ncommitting:\n- test")
+            .unwrap();
         assert!(CheckListList::from_file(temp.child(".checklist.yml").path()).is_err())
     }
 

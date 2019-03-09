@@ -1,6 +1,6 @@
 [package]
 name = "checklist"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Mike Stipicevic <stipredirect@gmail.com>"]
 edition = "2018"
 

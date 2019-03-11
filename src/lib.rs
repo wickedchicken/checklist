@@ -43,6 +43,7 @@ struct CheckList {
 }
 
 impl CheckListList {
+    /// Creates a CheckListList from a file
     fn from_file(path: &Path) -> Result<CheckListList, Error> {
         let file = match File::open(&path) {
             Err(e) => bail!("couldn't open file {}: {}", path.display(), e),
@@ -54,6 +55,7 @@ impl CheckListList {
         }
     }
 
+    /// Creates a CheckListList from a Reader
     fn from_reader<R: Read>(input: R) -> Result<CheckListList, Error> {
         match serde_yaml::from_reader::<_, VersionedCheckListList>(input) {
             Err(e) => bail!("couldn't parse yaml: {}", e),
@@ -64,6 +66,7 @@ impl CheckListList {
     }
 }
 
+/// Asks a yes/no question to the user, returning the response
 fn ask_question(prompt: &str) -> Result<bool, Error> {
     let mut theme = ColorfulTheme::default();
     theme.no_style = Style::new().red();
@@ -72,10 +75,12 @@ fn ask_question(prompt: &str) -> Result<bool, Error> {
         .interact()?)
 }
 
+/// Asks a formatted yes/no question to the user, returning the response
 fn ask_formatted_question(prefix: &str, prompt: &str) -> Result<bool, Error> {
     ask_question(&format!("{}{}?", prefix, prompt))
 }
 
+/// Prompt the user with a list of yes/no questions, stopping if any are false
 fn question_loop(checklist: &CheckList) -> Result<bool, Error> {
     let success = Style::new().green();
     let failure = Style::new().red();
@@ -96,6 +101,7 @@ fn question_loop(checklist: &CheckList) -> Result<bool, Error> {
     Ok(true)
 }
 
+/// Run a list of commands, stopping if any fail
 fn shell_loop(checklist: &CheckList) -> Result<bool, Error> {
     let success = Style::new().green();
     let failure = Style::new().red();
@@ -145,6 +151,7 @@ pub struct Opt {
     checklist: PathBuf,
 }
 
+/// Run automated tests and ask if manual tests have been done
 pub fn run(opts: &Opt) -> Result<(), Error> {
     let success = Style::new().green();
     let failure = Style::new().red();

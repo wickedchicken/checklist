@@ -1,33 +1,74 @@
 ---
 language: rust
-rust:
-  - stable
-  - beta
-  - nightly
-
-cache: cargo
-
-matrix:
-  allow_failures:
-    - rust: nightly
-  fast_finish: true
 
 dist: xenial
+services: docker
+
+env:
+  global:
+    - CRATE_NAME=checklist
+
+cache: cargo
+before_cache:
+  # Travis can't cache files that are not readable by "others"
+  - chmod -R a+r $HOME/.cargo
+
+matrix:
+  include:
+    # Linux
+    - env: TARGET=i686-unknown-linux-gnu
+    - env: TARGET=i686-unknown-linux-musl
+    - env: TARGET=x86_64-unknown-linux-gnu
+    - env: TARGET=x86_64-unknown-linux-musl
+
+    # OSX
+    - env: TARGET=x86_64-apple-darwin
+      os: osx
+
 
 branches:
   only:
+    # release tags
+    - /^v\d+\.\d+\.\d+.*$/
     - master
+
+before_install:
+  - set -e
+  - rustup self update
 
 install:
   - pip install --user yamllint  # xenial yamllint is too old for -s
+  - sh ci/install.sh
+  - source ~/.cargo/env || true
 
 before_script:
   - rustup component add rustfmt
   - rustup component add clippy
 
 script:
-  - yamllint -s .checklist.yml .travis.yml
-  - cargo fmt --all -- --check
-  - cargo clippy -- -D warnings
-  - cargo build
-  - cargo test
+  - bash ci/script.sh
+
+after_script: set +e
+
+before_deploy:
+  - sh ci/before_deploy.sh
+
+deploy:
+  api_key:
+    secure: "UUxFMBwUMKeiHHvVxHDQ/+LFSMP3ZMqtnMKT0xH2Ftii71EN4pyNLoDJCIl03AM35H\
+    8/F3GcaaBKaLoWA53Rr76IEXjgdkunpm2UL2aqgarWzLGvBwuGUNgooOQiTcjCxQf+e+s6znxY7\
+    3Jw2IlyULkc/wlgRmTmNkNg3yhSWtGDb4sOUXxXCDjMievZO897ktMyobGW67HGW4KR1hOVSEHv\
+    EAcLIawR9mJe1dZvjyxgBAz4FWbkpgr1yKBrup3w26F0KEOf+FSC9aWWTBWD6IVPN104psceO7A\
+    gOXSjbiXlvmvV7IJu0Z9HUu4DDSx+UhTH08bAQXTmka3d6HTdj9BP3KPQzu+DXo8DTmjBkl0Hwn\
+    zh/THIl+QkDdW+WHLxuctNRZEqu+TlhGt+R3FD34Cj39rgN0Zocpj4sbAhZGzypYvmnRxmdcDVZ\
+    9uYhcnLwwUTOl0MLqvW0YLGa6rWtLX2epxYbUjfhgUEgXLumMguXg7oMYhbSKg6XhioFQhW5hct\
+    fU4fBB0zEl+3yY/982xLGsoPDk5+YIaAOvUtA17PD8umJwGZCWP3coiv6LYtEB8VOiF6e9A6j8L\
+    ch424EVZAZHn8vh08OgKNRZ5XAI58JWgKnoWFQ8sqcyajyVZf5OAaozsQA6wVXT1mQFPC/aR61p\
+    EvQAMcB7EpAtTKku8="
+  file_glob: true
+  file: $CRATE_NAME-$TRAVIS_TAG-$TARGET.*
+  on:  # yamllint disable-line rule:truthy
+    condition: $TRAVIS_RUST_VERSION = stable
+    tags: true
+  provider: releases
+  skip_cleanup: true

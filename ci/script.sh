@@ -9,7 +9,11 @@ main() {
     fi
     cargo fmt --all -- --check
     cross build --target $TARGET
-    cross clippy -- --target $TARGET -D warnings
+    # Re-enable for all targets once https://github.com/rust-lang/rust/issues/62558 is
+    # fixed.
+    if [ "$TARGET" == "x86_64-unknown-linux-gnu" ]; then
+        cross clippy -- --target $TARGET -D warnings
+    fi
     cross build --target $TARGET --release
 
     if [ ! -z $DISABLE_TESTS ]; then

@@ -63,7 +63,9 @@ deploy:
     skip_cleanup: true
   - provider: cargo
     on:  # yamllint disable-line rule:truthy
-      condition: "$TRAVIS_RUST_VERSION = stable"
+      condition:
+        - "$TRAVIS_RUST_VERSION = stable"
+        - "$TARGET = x86_64-unknown-linux-gnu"
       tags: true
     token:
       secure: PWAsCa4DPjMqNhUXd1Agx9XZeCFc+58XnuymiBtzuRHCpvBnGnuMGwLJh+L9R75//XHsgdSXDoa+QU6Spw3x6j8wuY1u2jAEGp3wK4XHwPgvNBiXDiVVGndkdbnPJsdailDCduSgycwXOYrGZZDkSo/XgZ5R/IGTTRjI/FoXBalvWtLP8RQmW8c2bxITVGCAz4W/KgXRbuXRWNVGuBsuDR7ytvxlCuTp6CSNB2DvIrU0s5LMJ0jxdpIxMUa1sekS7GF/smpOtmoxRXz9UfZGkabE9Fhuca/XpR5Jgov7xijwNVrPf7J/ROVofzip+TimAgQ+4aZCKjQpMPSBKYEVfT2/bQzbJw29LvQKnByp271iCrrB5+MPvYnMQ9U4O2W+e7s80s8JGztDfyW/doRjPm+ot+4BWE7Sa843Fuwy22XX8Tm40efYbFRlvixuQ+coNhXbFSMvxbJJWLtZyI2NToJ0BpS9Phfm6TiZuFbeiSXMtXMGELDHPVZ5QJikK63yduSJZuqLoJpTRx7JwwS23vCFkK8fL/RyDYJLCJu0zhstZdC7/W5i8D1Wf/UBvAU1ouCQYDG0pN8rENGL1GWX7I/0fgySR0E63h5NP2deqQ+2p2ksfqcBYuYOMHSZrtaBVfDluMOR8TFipXg9kQt+JLAkXwAU8nTtiyErd3/XBTs=  # yamllint disable-line rule:line-length

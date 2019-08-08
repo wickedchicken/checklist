@@ -52,21 +52,18 @@ before_deploy:
   - sh ci/before_deploy.sh
 
 deploy:
-  api_key:
-    secure: "UUxFMBwUMKeiHHvVxHDQ/+LFSMP3ZMqtnMKT0xH2Ftii71EN4pyNLoDJCIl03AM35H\
-    8/F3GcaaBKaLoWA53Rr76IEXjgdkunpm2UL2aqgarWzLGvBwuGUNgooOQiTcjCxQf+e+s6znxY7\
-    3Jw2IlyULkc/wlgRmTmNkNg3yhSWtGDb4sOUXxXCDjMievZO897ktMyobGW67HGW4KR1hOVSEHv\
-    EAcLIawR9mJe1dZvjyxgBAz4FWbkpgr1yKBrup3w26F0KEOf+FSC9aWWTBWD6IVPN104psceO7A\
-    gOXSjbiXlvmvV7IJu0Z9HUu4DDSx+UhTH08bAQXTmka3d6HTdj9BP3KPQzu+DXo8DTmjBkl0Hwn\
-    zh/THIl+QkDdW+WHLxuctNRZEqu+TlhGt+R3FD34Cj39rgN0Zocpj4sbAhZGzypYvmnRxmdcDVZ\
-    9uYhcnLwwUTOl0MLqvW0YLGa6rWtLX2epxYbUjfhgUEgXLumMguXg7oMYhbSKg6XhioFQhW5hct\
-    fU4fBB0zEl+3yY/982xLGsoPDk5+YIaAOvUtA17PD8umJwGZCWP3coiv6LYtEB8VOiF6e9A6j8L\
-    ch424EVZAZHn8vh08OgKNRZ5XAI58JWgKnoWFQ8sqcyajyVZf5OAaozsQA6wVXT1mQFPC/aR61p\
-    EvQAMcB7EpAtTKku8="
-  file_glob: true
-  file: $CRATE_NAME-$TRAVIS_TAG-$TARGET.*
-  on:  # yamllint disable-line rule:truthy
-    condition: $TRAVIS_RUST_VERSION = stable
-    tags: true
-  provider: releases
-  skip_cleanup: true
+  - provider: releases
+    api_key:
+      secure: UUxFMBwUMKeiHHvVxHDQ/+LFSMP3ZMqtnMKT0xH2Ftii71EN4pyNLoDJCIl03AM35H8/F3GcaaBKaLoWA53Rr76IEXjgdkunpm2UL2aqgarWzLGvBwuGUNgooOQiTcjCxQf+e+s6znxY73Jw2IlyULkc/wlgRmTmNkNg3yhSWtGDb4sOUXxXCDjMievZO897ktMyobGW67HGW4KR1hOVSEHvEAcLIawR9mJe1dZvjyxgBAz4FWbkpgr1yKBrup3w26F0KEOf+FSC9aWWTBWD6IVPN104psceO7AgOXSjbiXlvmvV7IJu0Z9HUu4DDSx+UhTH08bAQXTmka3d6HTdj9BP3KPQzu+DXo8DTmjBkl0Hwnzh/THIl+QkDdW+WHLxuctNRZEqu+TlhGt+R3FD34Cj39rgN0Zocpj4sbAhZGzypYvmnRxmdcDVZ9uYhcnLwwUTOl0MLqvW0YLGa6rWtLX2epxYbUjfhgUEgXLumMguXg7oMYhbSKg6XhioFQhW5hctfU4fBB0zEl+3yY/982xLGsoPDk5+YIaAOvUtA17PD8umJwGZCWP3coiv6LYtEB8VOiF6e9A6j8Lch424EVZAZHn8vh08OgKNRZ5XAI58JWgKnoWFQ8sqcyajyVZf5OAaozsQA6wVXT1mQFPC/aR61pEvQAMcB7EpAtTKku8=  # yamllint disable-line rule:line-length
+    file_glob: true
+    file: "$CRATE_NAME-$TRAVIS_TAG-$TARGET.*"
+    on:  # yamllint disable-line rule:truthy
+      condition: "$TRAVIS_RUST_VERSION = stable"
+      tags: true
+    skip_cleanup: true
+  - provider: cargo
+    on:  # yamllint disable-line rule:truthy
+      condition: "$TRAVIS_RUST_VERSION = stable"
+      tags: true
+    token:
+      secure: PWAsCa4DPjMqNhUXd1Agx9XZeCFc+58XnuymiBtzuRHCpvBnGnuMGwLJh+L9R75//XHsgdSXDoa+QU6Spw3x6j8wuY1u2jAEGp3wK4XHwPgvNBiXDiVVGndkdbnPJsdailDCduSgycwXOYrGZZDkSo/XgZ5R/IGTTRjI/FoXBalvWtLP8RQmW8c2bxITVGCAz4W/KgXRbuXRWNVGuBsuDR7ytvxlCuTp6CSNB2DvIrU0s5LMJ0jxdpIxMUa1sekS7GF/smpOtmoxRXz9UfZGkabE9Fhuca/XpR5Jgov7xijwNVrPf7J/ROVofzip+TimAgQ+4aZCKjQpMPSBKYEVfT2/bQzbJw29LvQKnByp271iCrrB5+MPvYnMQ9U4O2W+e7s80s8JGztDfyW/doRjPm+ot+4BWE7Sa843Fuwy22XX8Tm40efYbFRlvixuQ+coNhXbFSMvxbJJWLtZyI2NToJ0BpS9Phfm6TiZuFbeiSXMtXMGELDHPVZ5QJikK63yduSJZuqLoJpTRx7JwwS23vCFkK8fL/RyDYJLCJu0zhstZdC7/W5i8D1Wf/UBvAU1ouCQYDG0pN8rENGL1GWX7I/0fgySR0E63h5NP2deqQ+2p2ksfqcBYuYOMHSZrtaBVfDluMOR8TFipXg9kQt+JLAkXwAU8nTtiyErd3/XBTs=  # yamllint disable-line rule:line-length

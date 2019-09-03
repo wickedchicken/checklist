@@ -21,6 +21,7 @@ use dialoguer::Confirmation;
 use duct_sh::sh_dangerous;
 use failure::Error;
 use indicatif::{ProgressBar, ProgressStyle};
+use structopt::clap::AppSettings;
 
 // Increment the version number every time the version changes. I can't figure out how to
 // break this out into its own const, see https://github.com/rust-lang/rust/issues/52393.
@@ -139,7 +140,7 @@ fn shell_loop(checklist: &CheckList) -> Result<bool, Error> {
 #[structopt(
     name = "checklist",
     about = "Run through a checklist",
-    raw(setting = "structopt::clap::AppSettings::ColoredHelp")
+    global_settings(&[AppSettings::ColoredHelp]),
 )]
 pub struct Opt {
     #[structopt(

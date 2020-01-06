@@ -109,7 +109,7 @@ fn shell_loop(checklist: &CheckList) -> Result<bool, Error> {
     let sty = ProgressStyle::default_bar()
         .template("{bar:40.green/white} {pos:>2}/{len:7} {wide_msg:.blue}");
     let b = ProgressBar::new(checklist.automated.len() as u64);
-    b.set_style(sty.clone());
+    b.set_style(sty);
     let progress_bar = scopeguard::guard(b, |b| {
         b.finish_and_clear();
     });

@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 
 use console::Style;
 use dialoguer::theme::ColorfulTheme;
-use dialoguer::Confirmation;
+use dialoguer::Confirm;
 use duct_sh::sh_dangerous;
 use failure::Error;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -71,11 +71,8 @@ impl CheckListList {
 
 /// Asks a yes/no question to the user, returning the response
 fn ask_question(prompt: &str) -> Result<bool, Error> {
-    let mut theme = ColorfulTheme::default();
-    theme.no_style = Style::new().red();
-    Ok(Confirmation::with_theme(&theme)
-        .with_text(&prompt)
-        .interact()?)
+    let theme = ColorfulTheme::default();
+    Ok(Confirm::with_theme(&theme).with_prompt(prompt).interact()?)
 }
 
 /// Asks a formatted yes/no question to the user, returning the response

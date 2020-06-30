@@ -28,7 +28,7 @@ use structopt::clap::AppSettings;
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "schema_version")]
 enum VersionedCheckListList {
-    #[serde(rename = "2")] // increment here
+    #[serde(rename = "3")] // increment here
     Current(CheckListList),
 }
 
@@ -37,6 +37,8 @@ struct CheckListList(BTreeMap<String, CheckList>);
 
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 struct CheckList {
+    #[serde(default)]
+    environment: BTreeMap<String, String>,
     #[serde(default)]
     automated: Vec<String>,
     #[serde(default)]
@@ -115,10 +117,13 @@ fn shell_loop(checklist: &CheckList) -> Result<bool, Error> {
     });
     for item in &checklist.automated {
         progress_bar.set_message(&item);
-        let command_res = sh_dangerous(item)
+        let mut command = sh_dangerous(item)
             .stdout_capture()
-            .stderr_capture()
-            .unchecked()
+            .stderr_capture();
+        for (key, value) in checklist.environment.iter() {
+            command = command.env(key, value);
+        }
+        let command_res = command.unchecked()
             .run()?;
         if !command_res.status.success() {
             progress_bar.finish_and_clear();
@@ -183,13 +188,14 @@ mod tests {
         });
         temp.child(".checklist.yml")
             .write_str(
-                "schema_version: 2\ncommitting:\n  automated: []\n  manual:\n    - test",
+                "schema_version: 3\ncommitting:\n  environment: {}\n  automated: []\n  manual:\n    - test",
             )
             .unwrap();
         assert_eq!(
             CheckListList::from_file(temp.child(".checklist.yml").path()).unwrap(),
             CheckListList(btreemap! {
                 String::from("committing") => CheckList{
+                    environment: Default::default(),
                     manual: vec![String::from("test")],
                     automated: vec![],
                 },
@@ -204,12 +210,13 @@ mod tests {
             t.close().unwrap();
         });
         temp.child(".checklist.yml")
-            .write_str("schema_version: 2\ncommitting:\n  manual: []")
+            .write_str("schema_version: 3\ncommitting:\n  manual: []")
             .unwrap();
         assert_eq!(
             CheckListList::from_file(temp.child(".checklist.yml").path()).unwrap(),
             CheckListList(btreemap! {
                 String::from("committing") => CheckList{
+                    environment: Default::default(),
                     manual: vec![],
                     automated: vec![],
                 },

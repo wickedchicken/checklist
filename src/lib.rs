@@ -117,9 +117,7 @@ fn shell_loop(checklist: &CheckList) -> Result<i32, Error> {
     });
     for item in &checklist.automated {
         progress_bar.set_message(&item);
-        let mut command = sh_dangerous(item)
-            .stdout_capture()
-            .stderr_capture();
+        let mut command = sh_dangerous(item).stdout_capture().stderr_capture();
         for (key, value) in checklist.environment.iter() {
             command = command.env(key, value);
         }

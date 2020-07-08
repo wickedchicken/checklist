@@ -82,7 +82,7 @@ fn ask_formatted_question(prefix: &str, prompt: &str) -> Result<bool, Error> {
 }
 
 /// Prompt the user with a list of yes/no questions, stopping if any are false
-fn question_loop(checklist: &CheckList) -> Result<bool, Error> {
+fn question_loop(checklist: &CheckList) -> Result<i32, Error> {
     let success = Style::new().green();
     let failure = Style::new().red();
     let mut seen = false;
@@ -94,16 +94,16 @@ fn question_loop(checklist: &CheckList) -> Result<bool, Error> {
         }
         if !ask_formatted_question(&"Have you: ", &item)? {
             println!("\nmanual tests: {}", failure.apply_to("failed"));
-            return Ok(false);
+            return Ok(1);
         }
     }
 
     println!("\nmanual tests: {}", success.apply_to("passed"));
-    Ok(true)
+    Ok(0)
 }
 
 /// Run a list of commands, stopping if any fail
-fn shell_loop(checklist: &CheckList) -> Result<bool, Error> {
+fn shell_loop(checklist: &CheckList) -> Result<i32, Error> {
     let success = Style::new().green();
     let failure = Style::new().red();
     let sty = ProgressStyle::default_bar()
@@ -115,25 +115,22 @@ fn shell_loop(checklist: &CheckList) -> Result<bool, Error> {
     });
     for item in &checklist.automated {
         progress_bar.set_message(&item);
-        let command_res = sh_dangerous(item)
-            .stdout_capture()
-            .stderr_capture()
-            .unchecked()
-            .run()?;
+        let command_res = sh_dangerous(item).stdout_capture().stderr_capture()
+            .unchecked().run()?;
         if !command_res.status.success() {
             progress_bar.finish_and_clear();
             println!("\nautomated tests: {}", failure.apply_to("failed"));
             println!("{} running: {}\n", failure.apply_to("error"), item);
             io::stdout().write_all(&command_res.stdout)?;
             io::stderr().write_all(&command_res.stderr)?;
-            return Ok(false);
+            return Ok(command_res.status.code().unwrap());
         }
         progress_bar.inc(1);
     }
 
     progress_bar.finish_and_clear();
     println!("\nautomated tests: {}", success.apply_to("passed"));
-    Ok(true)
+    Ok(0)
 }
 
 #[derive(Debug, StructOpt)]
@@ -153,21 +150,22 @@ pub struct Opt {
 }
 
 /// Run automated tests and ask if manual tests have been done
-pub fn run(opts: &Opt) -> Result<(), Error> {
+pub fn run(opts: &Opt) -> Result<i32, Error> {
     let success = Style::new().green();
     let failure = Style::new().red();
     let checklists = CheckListList::from_file(&opts.checklist)?;
     if let Some(checklist) = checklists.0.get("committing") {
-        if shell_loop(&checklist)? && question_loop(&checklist)? {
+        if shell_loop(&checklist)? == 0 && question_loop(&checklist)? == 0 {
             println!("{}", success.apply_to("all clear!"));
         } else {
             println!(
                 "{} please fix and start again",
                 failure.apply_to("aborting")
             );
+            return Ok(1);
         }
     }
-    Ok(())
+    Ok(0)
 }
 
 #[cfg(test)]
@@ -246,5 +244,25 @@ mod tests {
             t.close().unwrap();
         });
         assert!(CheckListList::from_file(temp.child("does_not_exist").path()).is_err())
+    }
+
+    #[test]
+    fn test_return_code() {
+        let c = CheckList {
+            environment: Default::default(),
+            automated: vec!["true".to_string()],
+            manual: vec![],
+        };
+        assert_eq!(shell_loop(&c).unwrap(), 0);
+    }
+
+    #[test]
+    fn test_return_code_fail() {
+        let c = CheckList {
+            environment: Default::default(),
+            automated: vec!["false".to_string()],
+            manual: vec![],
+        };
+        assert_eq!(shell_loop(&c).unwrap(), 1);
     }
 }

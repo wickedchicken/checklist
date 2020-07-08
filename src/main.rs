@@ -1,5 +1,3 @@
-use checklist;
-
 use console::style;
 use structopt::StructOpt;
 

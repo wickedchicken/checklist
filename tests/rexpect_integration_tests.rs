@@ -29,7 +29,7 @@ fn with_checklist(tempdir: &TempDir, contents: &str) -> String {
     let checklist_file = tempdir.child(".checklist.yml");
 
     checklist_file
-        .write_str(&format!("schema_version: 2\n{}", contents))
+        .write_str(&format!("schema_version: 3\n{}", contents))
         .unwrap();
 
     checklist_file.path().to_str().unwrap().to_string()

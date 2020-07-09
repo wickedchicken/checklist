@@ -51,7 +51,8 @@ fn test_basic_usage() {
     .unwrap();
 
     p.exp_string("test").unwrap();
-    p.send_line("y").unwrap();
+    p.send("y").unwrap();
+    p.flush().unwrap();
     p.exp_string("all clear!").unwrap();
     p.exp_eof().unwrap();
 }
@@ -72,7 +73,8 @@ fn test_basic_rejection() {
     .unwrap();
 
     p.exp_string("test").unwrap();
-    p.send_line("n").unwrap();
+    p.send("n").unwrap();
+    p.flush().unwrap();
     p.exp_string("please fix and start again").unwrap();
     p.exp_eof().unwrap();
 }
@@ -96,9 +98,11 @@ fn test_multi_success() {
     .unwrap();
 
     p.exp_string("test").unwrap();
-    p.send_line("y").unwrap();
+    p.send("y").unwrap();
+    p.flush().unwrap();
     p.exp_string("Great! Continuing...").unwrap();
-    p.send_line("y").unwrap();
+    p.send("y").unwrap();
+    p.flush().unwrap();
     p.exp_string("all clear!").unwrap();
     p.exp_eof().unwrap();
 }
@@ -122,9 +126,12 @@ fn test_multi_rejection() {
     .unwrap();
 
     p.exp_string("test").unwrap();
-    p.send_line("y").unwrap();
+    p.send("y").unwrap();
+    p.flush().unwrap();
     p.exp_string("Great! Continuing...").unwrap();
-    p.send_line("n").unwrap();
+    p.exp_string("test2").unwrap();
+    p.send("n").unwrap();
+    p.flush().unwrap();
     p.exp_string("please fix and start again").unwrap();
     p.exp_eof().unwrap();
 }

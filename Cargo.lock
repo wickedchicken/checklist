@@ -120,7 +120,7 @@ checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
 
 [[package]]
 name = "checklist"
-version = "0.2.4"
+version = "0.3.0"
 dependencies = [
  "assert_cmd",
  "assert_fs",

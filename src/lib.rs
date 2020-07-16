@@ -48,9 +48,54 @@ struct CheckList {
     #[serde(default)]
     environment: BTreeMap<String, String>,
     #[serde(default)]
-    automated: Vec<String>,
+    automated: Vec<StringOrStarlarkExpr>,
     #[serde(default)]
     manual: Vec<String>,
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
+struct StarlarkExpr {
+    starlark: String,
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+enum StringOrStarlarkExpr {
+    StarlarkExpr(StarlarkExpr),
+    String(String),
+}
+
+impl StringOrStarlarkExpr {
+    fn eval(&self) -> Result<String, Error> {
+        match self {
+            StringOrStarlarkExpr::String(s) => Ok(s.to_string()),
+            StringOrStarlarkExpr::StarlarkExpr(expr) => {
+                let (global_env, type_values) = global_environment();
+                global_env.freeze();
+                let mut env = global_env.child("shell_loop");
+                let map = Arc::new(Mutex::new(codemap::CodeMap::new()));
+
+                // change to match filename
+                match eval(&map, "input", &expr.starlark, Dialect::Bzl, &mut env, &type_values, global_env) {
+                    Err(diag) => {
+                        let cloned_map = Arc::clone(&map);
+                        let unlocked_map = cloned_map.lock().unwrap();
+                        let mut emitter = Emitter::stderr(ColorConfig::Always, Some(&unlocked_map));
+                        emitter.emit(&[diag]);
+                        bail!("Error interpreting check '{}'", &expr.starlark);
+                    },
+                    Ok(res) => match res.get_type() {
+                        "string" => Ok(res.to_str()),
+                        _ => bail!(
+                            "Error interpreting check '{}': result must be string! (was {})",
+                            &expr.starlark,
+                            res.get_type()
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl CheckListList {
@@ -121,31 +166,9 @@ fn shell_loop(checklist: &CheckList) -> Result<i32, Error> {
         b.finish_and_clear();
     });
 
-    let (global_env, type_values) = global_environment();
-    global_env.freeze();
 
     for item in &checklist.automated {
-        let mut env = global_env.child("shell_loop");
-        let map = Arc::new(Mutex::new(codemap::CodeMap::new()));
-
-        // change to match filename
-        let res = match eval(&map, "input", &item, Dialect::Bzl, &mut env, &type_values, global_env.clone()) {
-            Err(diag) => {
-                let cloned_map = Arc::clone(&map);
-                let unlocked_map = cloned_map.lock().unwrap();
-                let mut emitter = Emitter::stderr(ColorConfig::Always, Some(&unlocked_map));
-                emitter.emit(&[diag]);
-                bail!("Error interpreting check '{}'", item);
-            },
-            Ok(res) => match res.get_type() {
-                "string" => res.to_str(),
-                _ => bail!(
-                    "Error interpreting check '{}': result must be string! (was {})",
-                    item,
-                    res.get_type()
-                )
-            }
-        };
+        let res = item.eval()?;
         progress_bar.set_message(&res);
         let mut command = sh_dangerous(&res).stdout_capture().stderr_capture();
         for (key, value) in checklist.environment.iter() {
@@ -287,7 +310,7 @@ mod tests {
     fn test_return_code() {
         let c = CheckList {
             environment: Default::default(),
-            automated: vec!["true".to_string()],
+            automated: vec![StringOrStarlarkExpr::String("true".to_string())],
             manual: vec![],
         };
         assert_eq!(shell_loop(&c).unwrap(), 0);
@@ -297,7 +320,7 @@ mod tests {
     fn test_return_code_fail() {
         let c = CheckList {
             environment: Default::default(),
-            automated: vec!["false".to_string()],
+            automated: vec![StringOrStarlarkExpr::String("false".to_string())],
             manual: vec![],
         };
         assert_eq!(shell_loop(&c).unwrap(), 1);

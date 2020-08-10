@@ -124,7 +124,7 @@ version = "0.3.0"
 dependencies = [
  "assert_cmd",
  "assert_fs",
- "console",
+ "console 0.12.0",
  "dialoguer",
  "duct_sh",
  "failure",
@@ -172,6 +172,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "console"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c0b1aacfaffdbff75be81c15a399b4bedf78aaefe840e8af1d299ac2ade885d2"
+dependencies = [
+ "encode_unicode",
+ "lazy_static",
+ "libc",
+ "regex",
+ "terminal_size",
+ "termios",
+ "unicode-width",
+ "winapi",
+ "winapi-util",
+]
+
+[[package]]
 name = "crossbeam-utils"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -188,7 +205,7 @@ version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f4aa86af7b19b40ef9cbef761ed411a49f0afa06b7b6dcd3dfe2f96a3c546138"
 dependencies = [
- "console",
+ "console 0.11.3",
  "lazy_static",
  "tempfile",
 ]
@@ -367,7 +384,7 @@ version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7baab56125e25686df467fe470785512329883aab42696d661247aca2a2896e4"
 dependencies = [
- "console",
+ "console 0.12.0",
  "lazy_static",
  "number_prefix",
  "regex",

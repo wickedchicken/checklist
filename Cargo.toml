@@ -20,7 +20,7 @@ indicatif = "0.15.0"
 maplit = "1.0.2"
 scopeguard = "1.1.0"
 serde = "1.0.114"
-serde_derive = "1.0.102"
+serde_derive = "1.0.122"
 serde_yaml = "0.8.13"
 structopt = "0.3.15"
 

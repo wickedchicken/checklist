@@ -225,9 +225,9 @@ dependencies = [
 
 [[package]]
 name = "duct_sh"
-version = "0.13.4"
+version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "176749ddadc0cfa96add36d84e9c61ee676fdca8e6e20c08a242a2426031a370"
+checksum = "cc81dfdc61d3d7a268e8f2768c4eca9cf2ff7ffc287f92f3dd89cb1f4ffb13a9"
 dependencies = [
  "duct",
 ]
